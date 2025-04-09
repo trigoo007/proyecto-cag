@@ -1,0 +1,24 @@
+├── server.   js                # Servidor principal
+├── package.json             # Dependencias del proyecto
+├── config.js                # Configuración del sistema
+├── db.js                    # Funciones de base de datos
+├── global-memory.js         # Sistema de memoria global
+├── document-processor.js    # Procesador de documentos
+├── prompt-builder.js        # Generador de prompts
+├── context-analyzer.js      # Analizador de contexto
+├── entity-extractor.js      # Extractor de entidades
+├── memory-store.js          # Almacenamiento de memoria
+├── title-generator.js       # Generador de títulos
+├── context-manager.js       # Gestor de contexto
+├── public/                  # Archivos del cliente
+│   ├── index.html           # HTML principal
+│   ├── styles.css           # Estilos CSS
+│   └── client.js            # Lógica del cliente
+└── data/                    # Directorio para datos
+    ├── conversations/       # Conversaciones
+    ├── documents/           # Documentos subidos
+    ├── entities/            # Información de entidades
+    ├── memory/              # Datos de memoria
+    │   ├── short_term/      # Memoria a corto plazo
+    │   └── long_term/       # Memoria a largo plazo
+    └── global_memory/       # Memoria global

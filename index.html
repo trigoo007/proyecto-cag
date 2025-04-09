@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAG - Augmentación Contextual para Gemma 3</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.0.3/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Barra lateral izquierda -->
+        <aside class="sidebar left-sidebar">
+            <div class="sidebar-header">
+                <h1 class="app-title">CAG Chat</h1>
+                <button id="new-chat-btn" class="primary-btn">
+                    <i class="fas fa-plus"></i> Nueva Conversación
+                </button>
+            </div>
+            
+            <div class="conversation-list-container">
+                <div class="search-container">
+                    <input type="text" id="search-conversations" placeholder="Buscar conversaciones...">
+                    <i class="fas fa-search"></i>
+                </div>
+                
+                <ul id="conversation-list" class="conversation-list">
+                    <!-- Las conversaciones se cargarán dinámicamente aquí -->
+                </ul>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button id="settings-btn" class="icon-btn" title="Configuración">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button id="help-btn" class="icon-btn" title="Ayuda">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+                <div class="system-status" id="system-status">
+                    <span class="status-dot online"></span>
+                    <span class="status-text">Sistema activo</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Contenido principal (chat) -->
+        <main class="chat-container">
+            <div class="chat-header">
+                <div class="conversation-info">
+                    <h2 id="conversation-title" class="conversation-title">Nueva conversación</h2>
+                    <button id="edit-title-btn" class="icon-btn" title="Editar título">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                
+                <div class="chat-actions">
+                    <button id="export-btn" class="secondary-btn" title="Exportar conversación">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                    <button id="delete-conversation-btn" class="danger-btn" title="Eliminar conversación">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="message-container" class="message-container">
+                <!-- Los mensajes se cargarán dinámicamente aquí -->
+                <div class="welcome-message">
+                    <h2>Bienvenido a CAG Chat</h2>
+                    <p>Conversa con Gemma 3 potenciado con Augmentación Contextual.</p>
+                    <p>Puedes subir documentos para enriquecer el contexto y obtener respuestas más precisas.</p>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="document-upload">
+                    <button id="upload-document-btn" class="icon-btn" title="Subir documento">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="file" id="document-upload-input" hidden>
+                </div>
+                
+                <div class="message-input-area">
+                    <textarea id="message-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
+                    <button id="send-btn" class="send-btn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <div class="input-options">
+                    <button id="settings-options-btn" class="icon-btn" title="Opciones de generación">
+                        <i class="fas fa-sliders-h"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Barra lateral derecha (documentos y contexto) -->
+        <aside class="sidebar right-sidebar">
+            <div class="sidebar-header">
+                <h3>Contexto y Documentos</h3>
+                <button id="toggle-sidebar-btn" class="icon-btn" title="Ocultar panel">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="documents">Documentos</button>
+                <button class="tab-btn" data-tab="context">Contexto</button>
+                <button class="tab-btn" data-tab="memory">Memoria</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Pestaña de documentos -->
+                <div id="documents-tab" class="tab-panel active">
+                    <div class="document-actions">
+                        <button id="upload-document-sidebar-btn" class="secondary-btn">
+                            <i class="fas fa-upload"></i> Subir
+                        </button>
+                        <div class="search-container compact">
+                            <input type="text" id="search-documents" placeholder="Buscar en documentos...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                    
+                    <ul id="document-list" class="document-list">
+                        <!-- Los documentos se cargarán dinámicamente aquí -->
+                        <li class="empty-message">No hay documentos subidos aún.</li>
+                    </ul>
+                </div>
+                
+                <!-- Pestaña de contexto -->
+                <div id="context-tab" class="tab-panel">
+                    <div class="context-section">
+                        <h4>Entidades Detectadas</h4>
+                        <div id="entity-list" class="entity-list">
+                            <!-- Las entidades se cargarán dinámicamente aquí -->
+                            <p class="empty-message">No hay entidades detectadas.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="context-section">
+                        <h4>Temas Identificados</h4>
+                        <div id="topic-list" class="topic-list">
+                            <!-- Los temas se cargarán dinámicamente aquí -->
+                            <p class="empty-message">No hay temas identificados.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pestaña de memoria -->
+                <div id="memory-tab" class="tab-panel">
+                    <div class="memory-actions">
+                        <button id="clear-memory-btn" class="danger-btn">
+                            <i class="fas fa-eraser"></i> Reiniciar Memoria
+                        </button>
+                    </div>
+                    
+                    <div class="context-section">
+                        <h4>Memoria a Corto Plazo</h4>
+                        <div id="short-term-memory" class="memory-list">
+                            <!-- La memoria se cargará dinámicamente aquí -->
+                            <p class="empty-message">No hay datos en memoria a corto plazo.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="context-section">
+                        <h4>Memoria a Largo Plazo</h4>
+                        <div id="long-term-memory" class="memory-list">
+                            <!-- La memoria se cargará dinámicamente aquí -->
+                            <p class="empty-message">No hay datos en memoria a largo plazo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- Modales -->
+    
+    <!-- Modal de configuración -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configuración</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>Parámetros de Generación</h4>
+                    
+                    <div class="setting-item">
+                        <label for="temperature-setting">Temperatura</label>
+                        <div class="slider-container">
+                            <input type="range" id="temperature-setting" min="0" max="1" step="0.05" value="0.7">
+                            <span id="temperature-value">0.7</span>
+                        </div>
+                        <p class="setting-description">Valores más altos aumentan la creatividad y variabilidad de las respuestas.</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="max-tokens-setting">Longitud máxima</label>
+                        <div class="slider-container">
+                            <input type="range" id="max-tokens-setting" min="100" max="8192" step="100" value="2048">
+                            <span id="max-tokens-value">2048</span>
+                        </div>
+                        <p class="setting-description">Determina la longitud máxima de las respuestas en tokens.</p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="system-prompt-setting">Prompt del Sistema</label>
+                        <textarea id="system-prompt-setting" rows="5"></textarea>
+                        <p class="setting-description">Personaliza las instrucciones base para el asistente.</p>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Interfaz</h4>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" id="dark-mode-setting" class="toggle-checkbox">
+                        <label for="dark-mode-setting">Modo oscuro</label>
+                    </div>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" id="auto-scroll-setting" class="toggle-checkbox" checked>
+                        <label for="auto-scroll-setting">Desplazamiento automático</label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Avanzado</h4>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" id="memory-enabled-setting" class="toggle-checkbox" checked>
+                        <label for="memory-enabled-setting">Habilitar memoria</label>
+                    </div>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" id="global-memory-setting" class="toggle-checkbox" checked>
+                        <label for="global-memory-setting">Memoria global entre conversaciones</label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="model-selection">Modelo</label>
+                        <select id="model-selection">
+                            <option value="gemma3:27b" selected>Gemma 3 27B</option>
+                            <option value="gemma3:7b">Gemma 3 7B</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="reset-settings-btn" class="secondary-btn">Restablecer</button>
+                <button id="save-settings-btn" class="primary-btn">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de visualización de documento -->
+    <div id="document-preview-modal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="document-preview-title">Vista previa del documento</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="document-info">
+                    <div id="document-metadata"></div>
+                    <div class="document-actions">
+                        <button id="document-search-btn" class="secondary-btn">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button id="document-delete-btn" class="danger-btn">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+                <div class="document-tabs">
+                    <button class="tab-btn active" data-tab="content">Contenido</button>
+                    <button class="tab-btn" data-tab="analysis">Análisis</button>
+                </div>
+                <div class="document-tab-content">
+                    <div id="document-content-tab" class="tab-panel active">
+                        <div id="document-content" class="document-content"></div>
+                    </div>
+                    <div id="document-analysis-tab" class="tab-panel">
+                        <div class="document-analysis">
+                            <div class="analysis-section">
+                                <h4>Resumen</h4>
+                                <div id="document-summary"></div>
+                            </div>
+                            <div class="analysis-section">
+                                <h4>Conceptos Clave</h4>
+                                <div id="document-concepts" class="tag-list"></div>
+                            </div>
+                            <div class="analysis-section">
+                                <h4>Entidades Detectadas</h4>
+                                <div id="document-entities" class="entity-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de búsqueda en documentos -->
+    <div id="document-search-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Buscar en Documentos</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-container">
+                    <input type="text" id="document-search-input" placeholder="Buscar término...">
+                    <button id="do-document-search-btn" class="primary-btn">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+                <div id="document-search-results" class="search-results">
+                    <!-- Los resultados se cargarán dinámicamente aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast de notificación -->
+    <div id="toast-container" class="toast-container"></div>
+    
+    <script src="client.js"></script>
+</body>
+</html>
