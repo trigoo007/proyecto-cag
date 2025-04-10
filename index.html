@@ -3,175 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; script-src 'self' cdnjs.cloudflare.com; 
+                   style-src 'self' cdnjs.cloudflare.com 'unsafe-inline'; 
+                   font-src cdnjs.cloudflare.com; img-src 'self' data:;">
     <title>CAG - Augmentación Contextual para Gemma 3</title>
+    
+    <!-- Precargar recursos críticos -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+    <link rel="preload" href="styles.css" as="style">
+    
+    <!-- Hojas de estilo -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.0.3/marked.min.js"></script>
+    
+    <!-- Scripts con carga diferida -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.0.3/marked.min.js" defer></script>
+    
+    <!-- Meta etiquetas para SEO y accesibilidad -->
+    <meta name="description" content="Chat con Augmentación Contextual para Gemma 3 - Una interfaz avanzada para interactuar con modelos de lenguaje">
+    <meta name="theme-color" content="#4a86e8">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container" role="application" aria-label="CAG Chat - Aplicación de chat con augmentación contextual">
         <!-- Barra lateral izquierda -->
-        <aside class="sidebar left-sidebar">
-            <div class="sidebar-header">
+        <nav class="sidebar left-sidebar" role="navigation" aria-label="Conversaciones">
+            <header class="sidebar-header">
                 <h1 class="app-title">CAG Chat</h1>
-                <button id="new-chat-btn" class="primary-btn">
-                    <i class="fas fa-plus"></i> Nueva Conversación
+                <button id="new-chat-btn" class="primary-btn" aria-label="Crear nueva conversación">
+                    <i class="fas fa-plus" aria-hidden="true"></i> 
+                    <span data-i18n="newConversation">Nueva Conversación</span>
                 </button>
-            </div>
+            </header>
             
             <div class="conversation-list-container">
-                <div class="search-container">
-                    <input type="text" id="search-conversations" placeholder="Buscar conversaciones...">
-                    <i class="fas fa-search"></i>
+                <div class="search-container" role="search">
+                    <input type="text" id="search-conversations" 
+                           placeholder="Buscar conversaciones..." 
+                           aria-label="Buscar en conversaciones">
+                    <i class="fas fa-search" aria-hidden="true"></i>
                 </div>
                 
-                <ul id="conversation-list" class="conversation-list">
+                <ul id="conversation-list" class="conversation-list" 
+                    role="list" aria-label="Lista de conversaciones">
                     <!-- Las conversaciones se cargarán dinámicamente aquí -->
+                    <li class="empty-state" id="empty-conversations" aria-live="polite">
+                        <i class="fas fa-comments" aria-hidden="true"></i>
+                        <p data-i18n="noConversationsYet">No hay conversaciones aún</p>
+                    </li>
                 </ul>
             </div>
             
-            <div class="sidebar-footer">
-                <button id="settings-btn" class="icon-btn" title="Configuración">
-                    <i class="fas fa-cog"></i>
+            <footer class="sidebar-footer">
+                <button id="settings-btn" class="icon-btn" 
+                        title="Configuración" 
+                        aria-label="Abrir configuración" 
+                        aria-haspopup="dialog">
+                    <i class="fas fa-cog" aria-hidden="true"></i>
                 </button>
-                <button id="help-btn" class="icon-btn" title="Ayuda">
-                    <i class="fas fa-question-circle"></i>
+                <button id="help-btn" class="icon-btn" 
+                        title="Ayuda" 
+                        aria-label="Mostrar ayuda">
+                    <i class="fas fa-question-circle" aria-hidden="true"></i>
                 </button>
-                <div class="system-status" id="system-status">
-                    <span class="status-dot online"></span>
-                    <span class="status-text">Sistema activo</span>
+                <div class="system-status" id="system-status" 
+                     aria-live="polite" role="status">
+                    <span class="status-dot online" aria-hidden="true"></span>
+                    <span class="status-text" data-i18n="systemActive">Sistema activo</span>
                 </div>
-            </div>
-        </aside>
+            </footer>
+        </nav>
         
         <!-- Contenido principal (chat) -->
-        <main class="chat-container">
-            <div class="chat-header">
+        <main class="chat-container" role="main">
+            <header class="chat-header">
                 <div class="conversation-info">
-                    <h2 id="conversation-title" class="conversation-title">Nueva conversación</h2>
-                    <button id="edit-title-btn" class="icon-btn" title="Editar título">
-                        <i class="fas fa-edit"></i>
+                    <h2 id="conversation-title" class="conversation-title" data-i18n="newConversation">Nueva conversación</h2>
+                    <button id="edit-title-btn" class="icon-btn" 
+                            title="Editar título" 
+                            aria-label="Editar título de la conversación">
+                        <i class="fas fa-edit" aria-hidden="true"></i>
                     </button>
                 </div>
                 
                 <div class="chat-actions">
-                    <button id="export-btn" class="secondary-btn" title="Exportar conversación">
-                        <i class="fas fa-download"></i> Exportar
+                    <button id="export-btn" class="secondary-btn" 
+                            title="Exportar conversación" 
+                            aria-label="Exportar esta conversación">
+                        <i class="fas fa-download" aria-hidden="true"></i> 
+                        <span data-i18n="export">Exportar</span>
                     </button>
-                    <button id="delete-conversation-btn" class="danger-btn" title="Eliminar conversación">
-                        <i class="fas fa-trash"></i>
+                    <button id="delete-conversation-btn" class="danger-btn" 
+                            title="Eliminar conversación" 
+                            aria-label="Eliminar esta conversación">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>
-            </div>
+            </header>
             
-            <div id="message-container" class="message-container">
+            <section id="message-container" class="message-container" 
+                     aria-label="Mensajes de la conversación" 
+                     aria-live="polite">
                 <!-- Los mensajes se cargarán dinámicamente aquí -->
-                <div class="welcome-message">
-                    <h2>Bienvenido a CAG Chat</h2>
-                    <p>Conversa con Gemma 3 potenciado con Augmentación Contextual.</p>
-                    <p>Puedes subir documentos para enriquecer el contexto y obtener respuestas más precisas.</p>
+                <div class="welcome-message" role="status">
+                    <h2 data-i18n="welcomeTitle">Bienvenido a CAG Chat</h2>
+                    <p data-i18n="welcomeMessage">Conversa con Gemma 3 potenciado con Augmentación Contextual.</p>
+                    <p data-i18n="welcomeTip">Puedes subir documentos para enriquecer el contexto y obtener respuestas más precisas.</p>
                 </div>
-            </div>
+            </section>
             
-            <div class="input-container">
+            <footer class="input-container">
                 <div class="document-upload">
-                    <button id="upload-document-btn" class="icon-btn" title="Subir documento">
-                        <i class="fas fa-paperclip"></i>
+                    <button id="upload-document-btn" class="icon-btn" 
+                            title="Subir documento" 
+                            aria-label="Subir un documento">
+                        <i class="fas fa-paperclip" aria-hidden="true"></i>
                     </button>
-                    <input type="file" id="document-upload-input" hidden>
+                    <input type="file" id="document-upload-input" 
+                           aria-label="Seleccionar archivo para subir" hidden>
                 </div>
                 
-                <div class="message-input-area">
-                    <textarea id="message-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
-                    <button id="send-btn" class="send-btn" disabled>
-                        <i class="fas fa-paper-plane"></i>
+                <div class="message-input-area" role="form" aria-label="Enviar mensaje">
+                    <textarea id="message-input" 
+                              placeholder="Escribe un mensaje..." 
+                              rows="1" 
+                              aria-label="Mensaje a enviar"
+                              data-i18n-placeholder="typeMessage"></textarea>
+                    <button id="send-btn" class="send-btn" 
+                            disabled 
+                            aria-label="Enviar mensaje">
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
                     </button>
                 </div>
                 
                 <div class="input-options">
-                    <button id="settings-options-btn" class="icon-btn" title="Opciones de generación">
-                        <i class="fas fa-sliders-h"></i>
+                    <button id="settings-options-btn" class="icon-btn" 
+                            title="Opciones de generación" 
+                            aria-label="Opciones de generación de texto">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
                     </button>
                 </div>
-            </div>
+            </footer>
         </main>
         
         <!-- Barra lateral derecha (documentos y contexto) -->
-        <aside class="sidebar right-sidebar">
-            <div class="sidebar-header">
-                <h3>Contexto y Documentos</h3>
-                <button id="toggle-sidebar-btn" class="icon-btn" title="Ocultar panel">
-                    <i class="fas fa-chevron-right"></i>
+        <aside class="sidebar right-sidebar" role="complementary" aria-label="Documentos y contexto">
+            <header class="sidebar-header">
+                <h3 data-i18n="contextAndDocuments">Contexto y Documentos</h3>
+                <button id="toggle-sidebar-btn" class="icon-btn" 
+                        title="Ocultar panel" 
+                        aria-label="Ocultar panel lateral">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
                 </button>
-            </div>
+            </header>
             
-            <div class="sidebar-tabs">
-                <button class="tab-btn active" data-tab="documents">Documentos</button>
-                <button class="tab-btn" data-tab="context">Contexto</button>
-                <button class="tab-btn" data-tab="memory">Memoria</button>
+            <div class="sidebar-tabs" role="tablist">
+                <button class="tab-btn active" 
+                        data-tab="documents" 
+                        role="tab" 
+                        aria-selected="true" 
+                        aria-controls="documents-tab"
+                        data-i18n="documents">Documentos</button>
+                <button class="tab-btn" 
+                        data-tab="context" 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="context-tab"
+                        data-i18n="context">Contexto</button>
+                <button class="tab-btn" 
+                        data-tab="memory" 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="memory-tab"
+                        data-i18n="memory">Memoria</button>
             </div>
             
             <div class="tab-content">
                 <!-- Pestaña de documentos -->
-                <div id="documents-tab" class="tab-panel active">
+                <div id="documents-tab" class="tab-panel active" 
+                     role="tabpanel" 
+                     aria-labelledby="tab-documents">
                     <div class="document-actions">
-                        <button id="upload-document-sidebar-btn" class="secondary-btn">
-                            <i class="fas fa-upload"></i> Subir
+                        <button id="upload-document-sidebar-btn" class="secondary-btn" 
+                                aria-label="Subir documento">
+                            <i class="fas fa-upload" aria-hidden="true"></i> 
+                            <span data-i18n="upload">Subir</span>
                         </button>
-                        <div class="search-container compact">
-                            <input type="text" id="search-documents" placeholder="Buscar en documentos...">
-                            <i class="fas fa-search"></i>
+                        <div class="search-container compact" role="search">
+                            <input type="text" id="search-documents" 
+                                   placeholder="Buscar en documentos..." 
+                                   aria-label="Buscar en documentos"
+                                   data-i18n-placeholder="searchInDocuments">
+                            <i class="fas fa-search" aria-hidden="true"></i>
                         </div>
                     </div>
                     
-                    <ul id="document-list" class="document-list">
+                    <ul id="document-list" class="document-list" 
+                        role="list" 
+                        aria-label="Lista de documentos">
                         <!-- Los documentos se cargarán dinámicamente aquí -->
-                        <li class="empty-message">No hay documentos subidos aún.</li>
+                        <li class="empty-state" aria-live="polite">
+                            <i class="fas fa-file-alt" aria-hidden="true"></i>
+                            <p data-i18n="noDocumentsYet">No hay documentos subidos aún.</p>
+                        </li>
                     </ul>
                 </div>
                 
                 <!-- Pestaña de contexto -->
-                <div id="context-tab" class="tab-panel">
+                <div id="context-tab" class="tab-panel" 
+                     role="tabpanel" 
+                     aria-labelledby="tab-context" 
+                     hidden>
                     <div class="context-section">
-                        <h4>Entidades Detectadas</h4>
-                        <div id="entity-list" class="entity-list">
+                        <h4 data-i18n="detectedEntities">Entidades Detectadas</h4>
+                        <div id="entity-list" class="entity-list" 
+                             role="region" 
+                             aria-label="Lista de entidades detectadas">
                             <!-- Las entidades se cargarán dinámicamente aquí -->
-                            <p class="empty-message">No hay entidades detectadas.</p>
+                            <p class="empty-state" aria-live="polite">
+                                <i class="fas fa-tag" aria-hidden="true"></i>
+                                <span data-i18n="noEntitiesDetected">No hay entidades detectadas.</span>
+                            </p>
                         </div>
                     </div>
                     
                     <div class="context-section">
-                        <h4>Temas Identificados</h4>
-                        <div id="topic-list" class="topic-list">
+                        <h4 data-i18n="identifiedTopics">Temas Identificados</h4>
+                        <div id="topic-list" class="topic-list" 
+                             role="region" 
+                             aria-label="Lista de temas identificados">
                             <!-- Los temas se cargarán dinámicamente aquí -->
-                            <p class="empty-message">No hay temas identificados.</p>
+                            <p class="empty-state" aria-live="polite">
+                                <i class="fas fa-list" aria-hidden="true"></i>
+                                <span data-i18n="noTopicsIdentified">No hay temas identificados.</span>
+                            </p>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Pestaña de memoria -->
-                <div id="memory-tab" class="tab-panel">
+                <div id="memory-tab" class="tab-panel" 
+                     role="tabpanel" 
+                     aria-labelledby="tab-memory" 
+                     hidden>
                     <div class="memory-actions">
-                        <button id="clear-memory-btn" class="danger-btn">
-                            <i class="fas fa-eraser"></i> Reiniciar Memoria
+                        <button id="clear-memory-btn" class="danger-btn" 
+                                aria-label="Reiniciar toda la memoria">
+                            <i class="fas fa-eraser" aria-hidden="true"></i> 
+                            <span data-i18n="resetMemory">Reiniciar Memoria</span>
                         </button>
                     </div>
                     
                     <div class="context-section">
-                        <h4>Memoria a Corto Plazo</h4>
-                        <div id="short-term-memory" class="memory-list">
+                        <h4 data-i18n="shortTermMemory">Memoria a Corto Plazo</h4>
+                        <div id="short-term-memory" class="memory-list" 
+                             role="region" 
+                             aria-label="Memoria a corto plazo">
                             <!-- La memoria se cargará dinámicamente aquí -->
-                            <p class="empty-message">No hay datos en memoria a corto plazo.</p>
+                            <p class="empty-state" aria-live="polite">
+                                <i class="fas fa-clock" aria-hidden="true"></i>
+                                <span data-i18n="noShortTermMemory">No hay datos en memoria a corto plazo.</span>
+                            </p>
                         </div>
                     </div>
                     
                     <div class="context-section">
-                        <h4>Memoria a Largo Plazo</h4>
-                        <div id="long-term-memory" class="memory-list">
+                        <h4 data-i18n="longTermMemory">Memoria a Largo Plazo</h4>
+                        <div id="long-term-memory" class="memory-list" 
+                             role="region" 
+                             aria-label="Memoria a largo plazo">
                             <!-- La memoria se cargará dinámicamente aquí -->
-                            <p class="empty-message">No hay datos en memoria a largo plazo.</p>
+                            <p class="empty-state" aria-live="polite">
+                                <i class="fas fa-brain" aria-hidden="true"></i>
+                                <span data-i18n="noLongTermMemory">No hay datos en memoria a largo plazo.</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -182,125 +289,224 @@
     <!-- Modales -->
     
     <!-- Modal de configuración -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Configuración</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
+    <div id="settings-modal" class="modal" 
+         role="dialog" 
+         aria-labelledby="settings-title" 
+         aria-hidden="true">
+        <div class="modal-content" role="document">
+            <header class="modal-header">
+                <h3 id="settings-title" data-i18n="settings">Configuración</h3>
+                <button class="close-modal-btn" 
+                        aria-label="Cerrar modal de configuración">&times;</button>
+            </header>
             <div class="modal-body">
-                <div class="settings-section">
-                    <h4>Parámetros de Generación</h4>
+                <section class="settings-section">
+                    <h4 data-i18n="generationParameters">Parámetros de Generación</h4>
                     
                     <div class="setting-item">
-                        <label for="temperature-setting">Temperatura</label>
+                        <label for="temperature-setting" data-i18n="temperature">Temperatura</label>
                         <div class="slider-container">
-                            <input type="range" id="temperature-setting" min="0" max="1" step="0.05" value="0.7">
+                            <input type="range" 
+                                   id="temperature-setting" 
+                                   min="0" 
+                                   max="1" 
+                                   step="0.05" 
+                                   value="0.7"
+                                   aria-valuemin="0"
+                                   aria-valuemax="1"
+                                   aria-valuenow="0.7"
+                                   aria-valuetext="0.7">
                             <span id="temperature-value">0.7</span>
                         </div>
-                        <p class="setting-description">Valores más altos aumentan la creatividad y variabilidad de las respuestas.</p>
+                        <p class="setting-description" data-i18n="temperatureDescription">
+                            Valores más altos aumentan la creatividad y variabilidad de las respuestas.
+                        </p>
                     </div>
                     
                     <div class="setting-item">
-                        <label for="max-tokens-setting">Longitud máxima</label>
+                        <label for="max-tokens-setting" data-i18n="maxLength">Longitud máxima</label>
                         <div class="slider-container">
-                            <input type="range" id="max-tokens-setting" min="100" max="8192" step="100" value="2048">
+                            <input type="range" 
+                                   id="max-tokens-setting" 
+                                   min="100" 
+                                   max="8192" 
+                                   step="100" 
+                                   value="2048"
+                                   aria-valuemin="100"
+                                   aria-valuemax="8192"
+                                   aria-valuenow="2048"
+                                   aria-valuetext="2048 tokens">
                             <span id="max-tokens-value">2048</span>
                         </div>
-                        <p class="setting-description">Determina la longitud máxima de las respuestas en tokens.</p>
+                        <p class="setting-description" data-i18n="maxLengthDescription">
+                            Determina la longitud máxima de las respuestas en tokens.
+                        </p>
                     </div>
                     
                     <div class="setting-item">
-                        <label for="system-prompt-setting">Prompt del Sistema</label>
-                        <textarea id="system-prompt-setting" rows="5"></textarea>
-                        <p class="setting-description">Personaliza las instrucciones base para el asistente.</p>
+                        <label for="system-prompt-setting" data-i18n="systemPrompt">Prompt del Sistema</label>
+                        <textarea id="system-prompt-setting" 
+                                  rows="5" 
+                                  aria-label="Instrucciones personalizadas para el asistente"></textarea>
+                        <p class="setting-description" data-i18n="systemPromptDescription">
+                            Personaliza las instrucciones base para el asistente.
+                        </p>
                     </div>
-                </div>
+                </section>
                 
-                <div class="settings-section">
-                    <h4>Interfaz</h4>
+                <section class="settings-section">
+                    <h4 data-i18n="interface">Interfaz</h4>
                     
                     <div class="setting-item checkbox">
-                        <input type="checkbox" id="dark-mode-setting" class="toggle-checkbox">
-                        <label for="dark-mode-setting">Modo oscuro</label>
+                        <input type="checkbox" 
+                               id="dark-mode-setting" 
+                               class="toggle-checkbox"
+                               aria-label="Activar modo oscuro">
+                        <label for="dark-mode-setting" data-i18n="darkMode">Modo oscuro</label>
                     </div>
                     
                     <div class="setting-item checkbox">
-                        <input type="checkbox" id="auto-scroll-setting" class="toggle-checkbox" checked>
-                        <label for="auto-scroll-setting">Desplazamiento automático</label>
-                    </div>
-                </div>
-                
-                <div class="settings-section">
-                    <h4>Avanzado</h4>
-                    
-                    <div class="setting-item checkbox">
-                        <input type="checkbox" id="memory-enabled-setting" class="toggle-checkbox" checked>
-                        <label for="memory-enabled-setting">Habilitar memoria</label>
-                    </div>
-                    
-                    <div class="setting-item checkbox">
-                        <input type="checkbox" id="global-memory-setting" class="toggle-checkbox" checked>
-                        <label for="global-memory-setting">Memoria global entre conversaciones</label>
+                        <input type="checkbox" 
+                               id="auto-scroll-setting" 
+                               class="toggle-checkbox" 
+                               checked
+                               aria-label="Activar desplazamiento automático">
+                        <label for="auto-scroll-setting" data-i18n="autoScroll">Desplazamiento automático</label>
                     </div>
                     
                     <div class="setting-item">
-                        <label for="model-selection">Modelo</label>
-                        <select id="model-selection">
-                            <option value="gemma3:27b" selected>Gemma 3 27B</option>
-                            <option value="gemma3:7b">Gemma 3 7B</option>
+                        <label for="theme-selector" data-i18n="theme">Tema</label>
+                        <select id="theme-selector" aria-label="Seleccionar tema">
+                            <option value="light" data-i18n="themeLight">Claro</option>
+                            <option value="dark" data-i18n="themeDark">Oscuro</option>
+                            <option value="contrast" data-i18n="themeContrast">Alto contraste</option>
+                            <option value="custom" data-i18n="themeCustom">Personalizado</option>
                         </select>
                     </div>
-                </div>
+                </section>
+                
+                <section class="settings-section">
+                    <h4 data-i18n="advanced">Avanzado</h4>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" 
+                               id="memory-enabled-setting" 
+                               class="toggle-checkbox" 
+                               checked
+                               aria-label="Activar función de memoria">
+                        <label for="memory-enabled-setting" data-i18n="enableMemory">Habilitar memoria</label>
+                    </div>
+                    
+                    <div class="setting-item checkbox">
+                        <input type="checkbox" 
+                               id="global-memory-setting" 
+                               class="toggle-checkbox" 
+                               checked
+                               aria-label="Activar memoria global">
+                        <label for="global-memory-setting" data-i18n="globalMemory">Memoria global entre conversaciones</label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="model-selection" data-i18n="model">Modelo</label>
+                        <select id="model-selection" aria-label="Seleccionar modelo de lenguaje">
+                            <option value="gemma3:27b" selected data-i18n="modelGemma27B">Gemma 3 27B</option>
+                            <option value="gemma3:7b" data-i18n="modelGemma7B">Gemma 3 7B</option>
+                        </select>
+                    </div>
+                </section>
             </div>
-            <div class="modal-footer">
-                <button id="reset-settings-btn" class="secondary-btn">Restablecer</button>
-                <button id="save-settings-btn" class="primary-btn">Guardar</button>
-            </div>
+            <footer class="modal-footer">
+                <button id="reset-settings-btn" 
+                        class="secondary-btn" 
+                        data-i18n="reset"
+                        aria-label="Restablecer configuración predeterminada">Restablecer</button>
+                <button id="save-settings-btn" 
+                        class="primary-btn" 
+                        data-i18n="save"
+                        aria-label="Guardar configuración">Guardar</button>
+            </footer>
         </div>
     </div>
     
     <!-- Modal de visualización de documento -->
-    <div id="document-preview-modal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3 id="document-preview-title">Vista previa del documento</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
+    <div id="document-preview-modal" class="modal" 
+         role="dialog" 
+         aria-labelledby="document-preview-title" 
+         aria-hidden="true">
+        <div class="modal-content large" role="document">
+            <header class="modal-header">
+                <h3 id="document-preview-title" data-i18n="documentPreview">Vista previa del documento</h3>
+                <button class="close-modal-btn" 
+                        aria-label="Cerrar vista previa del documento">&times;</button>
+            </header>
             <div class="modal-body">
                 <div class="document-info">
-                    <div id="document-metadata"></div>
+                    <div id="document-metadata" role="region" aria-label="Metadatos del documento"></div>
                     <div class="document-actions">
-                        <button id="document-search-btn" class="secondary-btn">
-                            <i class="fas fa-search"></i> Buscar
+                        <button id="document-search-btn" 
+                                class="secondary-btn" 
+                                aria-label="Buscar en el documento">
+                            <i class="fas fa-search" aria-hidden="true"></i> 
+                            <span data-i18n="search">Buscar</span>
                         </button>
-                        <button id="document-delete-btn" class="danger-btn">
-                            <i class="fas fa-trash"></i> Eliminar
+                        <button id="document-delete-btn" 
+                                class="danger-btn" 
+                                aria-label="Eliminar este documento">
+                            <i class="fas fa-trash" aria-hidden="true"></i> 
+                            <span data-i18n="delete">Eliminar</span>
                         </button>
                     </div>
                 </div>
-                <div class="document-tabs">
-                    <button class="tab-btn active" data-tab="content">Contenido</button>
-                    <button class="tab-btn" data-tab="analysis">Análisis</button>
+                <div class="document-tabs" role="tablist">
+                    <button class="tab-btn active" 
+                            data-tab="content" 
+                            role="tab" 
+                            aria-selected="true" 
+                            aria-controls="document-content-tab"
+                            data-i18n="content">Contenido</button>
+                    <button class="tab-btn" 
+                            data-tab="analysis" 
+                            role="tab" 
+                            aria-selected="false" 
+                            aria-controls="document-analysis-tab"
+                            data-i18n="analysis">Análisis</button>
                 </div>
                 <div class="document-tab-content">
-                    <div id="document-content-tab" class="tab-panel active">
-                        <div id="document-content" class="document-content"></div>
+                    <div id="document-content-tab" 
+                         class="tab-panel active" 
+                         role="tabpanel" 
+                         aria-labelledby="tab-content">
+                        <div id="document-content" 
+                             class="document-content" 
+                             role="region" 
+                             aria-label="Contenido del documento"></div>
                     </div>
-                    <div id="document-analysis-tab" class="tab-panel">
+                    <div id="document-analysis-tab" 
+                         class="tab-panel" 
+                         role="tabpanel" 
+                         aria-labelledby="tab-analysis" 
+                         hidden>
                         <div class="document-analysis">
-                            <div class="analysis-section">
-                                <h4>Resumen</h4>
-                                <div id="document-summary"></div>
-                            </div>
-                            <div class="analysis-section">
-                                <h4>Conceptos Clave</h4>
-                                <div id="document-concepts" class="tag-list"></div>
-                            </div>
-                            <div class="analysis-section">
-                                <h4>Entidades Detectadas</h4>
-                                <div id="document-entities" class="entity-list"></div>
-                            </div>
+                            <section class="analysis-section">
+                                <h4 data-i18n="summary">Resumen</h4>
+                                <div id="document-summary" 
+                                     role="region" 
+                                     aria-label="Resumen del documento"></div>
+                            </section>
+                            <section class="analysis-section">
+                                <h4 data-i18n="keyConcepts">Conceptos Clave</h4>
+                                <div id="document-concepts" 
+                                     class="tag-list" 
+                                     role="region" 
+                                     aria-label="Conceptos clave del documento"></div>
+                            </section>
+                            <section class="analysis-section">
+                                <h4 data-i18n="detectedEntities">Entidades Detectadas</h4>
+                                <div id="document-entities" 
+                                     class="entity-list" 
+                                     role="region" 
+                                     aria-label="Entidades detectadas en el documento"></div>
+                            </section>
                         </div>
                     </div>
                 </div>
@@ -309,29 +515,148 @@
     </div>
     
     <!-- Modal de búsqueda en documentos -->
-    <div id="document-search-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Buscar en Documentos</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
+    <div id="document-search-modal" class="modal" 
+         role="dialog" 
+         aria-labelledby="document-search-title" 
+         aria-hidden="true">
+        <div class="modal-content" role="document">
+            <header class="modal-header">
+                <h3 id="document-search-title" data-i18n="searchInDocuments">Buscar en Documentos</h3>
+                <button class="close-modal-btn" 
+                        aria-label="Cerrar búsqueda en documentos">&times;</button>
+            </header>
             <div class="modal-body">
-                <div class="search-container">
-                    <input type="text" id="document-search-input" placeholder="Buscar término...">
-                    <button id="do-document-search-btn" class="primary-btn">
-                        <i class="fas fa-search"></i> Buscar
+                <div class="search-container" role="search">
+                    <input type="text" 
+                           id="document-search-input" 
+                           placeholder="Buscar término..." 
+                           aria-label="Término de búsqueda"
+                           data-i18n-placeholder="searchTerm">
+                    <button id="do-document-search-btn" 
+                            class="primary-btn" 
+                            aria-label="Iniciar búsqueda">
+                        <i class="fas fa-search" aria-hidden="true"></i> 
+                        <span data-i18n="search">Buscar</span>
                     </button>
                 </div>
-                <div id="document-search-results" class="search-results">
+                <div id="document-search-results" 
+                     class="search-results" 
+                     role="region" 
+                     aria-label="Resultados de búsqueda"
+                     aria-live="polite">
                     <!-- Los resultados se cargarán dinámicamente aquí -->
+                    <p class="empty-state" aria-live="polite">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span data-i18n="noSearchResults">Ingresa un término para buscar</span>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- Toast de notificación -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" 
+         class="toast-container" 
+         role="log" 
+         aria-live="polite" 
+         aria-relevant="additions"></div>
     
-    <script src="client.js"></script>
+    <!-- Plantillas para componentes -->
+    <template id="message-template">
+        <div class="message" role="listitem">
+            <div class="message-bubble">
+                <div class="message-content"></div>
+                <div class="message-meta">
+                    <span class="message-time"></span>
+                    <div class="message-buttons">
+                        <button class="message-button copy-btn" 
+                                title="Copiar al portapapeles"
+                                aria-label="Copiar mensaje al portapapeles">
+                            <i class="fas fa-copy" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="document-item-template">
+        <li class="document-item" role="listitem">
+            <div class="document-item-info">
+                <i class="document-icon" aria-hidden="true"></i>
+                <div class="document-details">
+                    <span class="document-name"></span>
+                    <span class="document-meta"></span>
+                </div>
+            </div>
+            <div class="document-actions">
+                <button class="icon-btn preview-document-btn" 
+                        title="Ver documento"
+                        aria-label="Ver documento">
+                    <i class="fas fa-eye" aria-hidden="true"></i>
+                </button>
+                <button class="icon-btn delete-document-btn" 
+                        title="Eliminar documento"
+                        aria-label="Eliminar documento">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                </button>
+            </div>
+        </li>
+    </template>
+    
+    <!-- Módulo de internacionalización -->
+    <script>
+        // Archivo de idioma para español (se cargará luego dinámicamente)
+        window.i18nData = {
+            newConversation: "Nueva Conversación",
+            systemActive: "Sistema activo",
+            export: "Exportar",
+            welcomeTitle: "Bienvenido a CAG Chat",
+            welcomeMessage: "Conversa con Gemma 3 potenciado con Augmentación Contextual.",
+            welcomeTip: "Puedes subir documentos para enriquecer el contexto y obtener respuestas más precisas.",
+            typeMessage: "Escribe un mensaje...",
+            contextAndDocuments: "Contexto y Documentos",
+            documents: "Documentos",
+            context: "Contexto",
+            memory: "Memoria",
+            upload: "Subir",
+            searchInDocuments: "Buscar en documentos...",
+            noDocumentsYet: "No hay documentos subidos aún.",
+            detectedEntities: "Entidades Detectadas",
+            noEntitiesDetected: "No hay entidades detectadas.",
+            identifiedTopics: "Temas Identificados",
+            noTopicsIdentified: "No hay temas identificados.",
+            resetMemory: "Reiniciar Memoria",
+            shortTermMemory: "Memoria a Corto Plazo",
+            noShortTermMemory: "No hay datos en memoria a corto plazo.",
+            longTermMemory: "Memoria a Largo Plazo",
+            noLongTermMemory: "No hay datos en memoria a largo plazo.",
+            // Y así sucesivamente con todos los textos
+        };
+    </script>
+    
+    <!-- Scripts de aplicación -->
+    <script src="client.js" defer></script>
+    
+    <!-- Script para inicialización de i18n -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar sistema de internacionalización
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (window.i18nData && window.i18nData[key]) {
+                    el.textContent = window.i18nData[key];
+                }
+            });
+            
+            // Inicializar placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (window.i18nData && window.i18nData[key]) {
+                    el.placeholder = window.i18nData[key];
+                }
+            });
+        });
+    </script>
 </body>
 </html>
