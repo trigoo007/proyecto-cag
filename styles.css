@@ -1,5 +1,13 @@
-/* Variables CSS */
+/* 
+ * CAG Application Styles
+ * Refactored version with improved organization, accessibility, and modern CSS
+ */
+
+/* ==========================================================================
+   Variables
+   ========================================================================== */
 :root {
+    /* Colors */
     --primary-color: #3a7bd5;
     --primary-dark: #2d62a3;
     --primary-light: #6e9de8;
@@ -9,29 +17,42 @@
     --warning-color: #ffc107;
     --info-color: #17a2b8;
     
+    /* Backgrounds */
     --bg-color: #f8f9fa;
     --bg-secondary: #ffffff;
     --bg-accent: #f1f3f5;
     
+    /* Text */
     --text-color: #212529;
     --text-secondary: #6c757d;
     --text-light: #adb5bd;
     
+    /* Borders and Shadows */
     --border-color: #dee2e6;
     --border-radius: 4px;
     --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     
+    /* Layout */
     --sidebar-width: 280px;
     --right-sidebar-width: 320px;
     
+    /* Typography */
     --font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     --code-font: 'Courier New', monospace;
     
+    /* Animation */
     --transition-speed: 0.2s;
+
+    /* Focus states for accessibility */
+    --focus-outline-color: var(--primary-light);
+    --focus-outline-width: 3px;
+    --focus-outline-offset: 2px;
 }
 
-/* Tema oscuro */
-.dark-mode {
+/* ==========================================================================
+   Theme: Dark Mode
+   ========================================================================== */
+[data-theme="dark"] {
     --primary-color: #4a8bff;
     --primary-dark: #3a7bd5;
     --primary-light: #6e9de8;
@@ -47,8 +68,34 @@
     --border-color: #30363d;
 }
 
-/* Reset y estilos base */
-* {
+/* High Contrast Theme */
+[data-theme="high-contrast"] {
+    --primary-color: #0066cc;
+    --primary-dark: #004e9e;
+    --primary-light: #0080ff;
+    
+    --bg-color: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-accent: #e0e0e0;
+    
+    --text-color: #000000;
+    --text-secondary: #333333;
+    --text-light: #666666;
+    
+    --border-color: #000000;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    
+    /* Increase contrast for accessibility */
+    --focus-outline-color: #000000;
+    --focus-outline-width: 4px;
+}
+
+/* ==========================================================================
+   Reset & Base Styles
+   ========================================================================== */
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -62,14 +109,24 @@ html, body {
     background-color: var(--bg-color);
 }
 
-/* Estructura principal */
+/* Accessibility improvements */
+:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
+}
+
+/* ==========================================================================
+   Layout Structure
+   ========================================================================== */
 .app-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr var(--right-sidebar-width);
+    grid-template-areas: "left-sidebar main right-sidebar";
     height: 100vh;
     overflow: hidden;
 }
 
-/* Barra lateral */
+/* Sidebar components */
 .sidebar {
     display: flex;
     flex-direction: column;
@@ -77,18 +134,18 @@ html, body {
     height: 100%;
     box-shadow: var(--box-shadow);
     overflow: hidden;
-    transition: width var(--transition-speed) ease;
+    transition: transform var(--transition-speed) ease;
     z-index: 10;
 }
 
 .left-sidebar {
-    width: var(--sidebar-width);
-    border-right: 1px solid var(--border-color);
+    grid-area: left-sidebar;
+    border-inline-end: 1px solid var(--border-color);
 }
 
 .right-sidebar {
-    width: var(--right-sidebar-width);
-    border-left: 1px solid var(--border-color);
+    grid-area: right-sidebar;
+    border-inline-start: 1px solid var(--border-color);
 }
 
 .sidebar-header {
@@ -96,10 +153,11 @@ html, body {
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
 }
 
-.sidebar-header h1, .sidebar-header h3 {
+.sidebar-header h1, 
+.sidebar-header h3 {
     margin: 0;
 }
 
@@ -114,13 +172,13 @@ html, body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-top: 1px solid var(--border-color);
-    margin-top: auto;
+    border-block-start: 1px solid var(--border-color);
+    margin-block-start: auto;
 }
 
-/* Contenedor principal de chat */
+/* Main chat area */
 .chat-container {
-    flex: 1;
+    grid-area: main;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -134,7 +192,7 @@ html, body {
     align-items: center;
     padding: 12px 20px;
     background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
 }
 
 .conversation-info {
@@ -144,7 +202,7 @@ html, body {
 
 .conversation-title {
     font-size: 1.3rem;
-    margin-right: 10px;
+    margin-inline-end: 10px;
     font-weight: 500;
 }
 
@@ -153,7 +211,7 @@ html, body {
     gap: 10px;
 }
 
-/* Contenedor de mensajes */
+/* Message container */
 .message-container {
     flex: 1;
     padding: 20px;
@@ -161,13 +219,13 @@ html, body {
     scroll-behavior: smooth;
 }
 
-/* Input de mensaje */
+/* Message input area */
 .input-container {
     display: flex;
     align-items: flex-end;
     padding: 12px 20px;
     background-color: var(--bg-secondary);
-    border-top: 1px solid var(--border-color);
+    border-block-start: 1px solid var(--border-color);
 }
 
 .message-input-area {
@@ -193,12 +251,15 @@ html, body {
     overflow-y: auto;
 }
 
-.document-upload, .input-options {
+.document-upload, 
+.input-options {
     display: flex;
     align-items: center;
 }
 
-/* Lista de conversaciones */
+/* ==========================================================================
+   Conversation List
+   ========================================================================== */
 .conversation-list-container {
     flex: 1;
     display: flex;
@@ -209,7 +270,7 @@ html, body {
 .search-container {
     position: relative;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
 }
 
 .search-container input {
@@ -224,8 +285,8 @@ html, body {
 
 .search-container .fa-search {
     position: absolute;
-    left: 26px;
-    top: 22px;
+    inset-inline-start: 26px;
+    inset-block-start: 22px;
     color: var(--text-secondary);
     font-size: 0.9rem;
 }
@@ -233,12 +294,12 @@ html, body {
 .search-container.compact {
     padding: 0;
     border: none;
-    margin-bottom: 10px;
+    margin-block-end: 10px;
 }
 
 .search-container.compact .fa-search {
-    left: 10px;
-    top: 10px;
+    inset-inline-start: 10px;
+    inset-block-start: 10px;
 }
 
 .conversation-list {
@@ -252,7 +313,7 @@ html, body {
     align-items: center;
     padding: 12px 16px;
     cursor: pointer;
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
     transition: background-color var(--transition-speed) ease;
 }
 
@@ -262,7 +323,7 @@ html, body {
 
 .conversation-item.active {
     background-color: var(--bg-accent);
-    border-left: 3px solid var(--primary-color);
+    border-inline-start: 3px solid var(--primary-color);
 }
 
 .conversation-item-title {
@@ -278,10 +339,12 @@ html, body {
     color: var(--text-secondary);
 }
 
-/* Pestañas */
+/* ==========================================================================
+   Tabs Components
+   ========================================================================== */
 .sidebar-tabs {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
 }
 
 .tab-btn {
@@ -300,9 +363,14 @@ html, body {
     background-color: var(--bg-accent);
 }
 
+.tab-btn:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
+}
+
 .tab-btn.active {
     color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
+    border-block-end: 2px solid var(--primary-color);
     font-weight: 500;
 }
 
@@ -322,10 +390,12 @@ html, body {
 
 .document-tabs {
     display: flex;
-    margin-bottom: 16px;
+    margin-block-end: 16px;
 }
 
-/* Listas de entidades, temas, etc. */
+/* ==========================================================================
+   Entity Lists and Context
+   ========================================================================== */
 .document-list {
     list-style-type: none;
 }
@@ -334,14 +404,14 @@ html, body {
     display: flex;
     align-items: center;
     padding: 10px;
-    margin-bottom: 8px;
+    margin-block-end: 8px;
     background-color: var(--bg-accent);
     border-radius: var(--border-radius);
     cursor: pointer;
 }
 
 .document-icon {
-    margin-right: 10px;
+    margin-inline-end: 10px;
     font-size: 1.2rem;
     color: var(--text-secondary);
 }
@@ -371,24 +441,27 @@ html, body {
 }
 
 .context-section {
-    margin-bottom: 20px;
+    margin-block-end: 20px;
 }
 
 .context-section h4 {
-    margin-bottom: 10px;
+    margin-block-end: 10px;
     color: var(--text-secondary);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.entity-list, .topic-list, .memory-list {
+.entity-list, 
+.topic-list, 
+.memory-list {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
-.entity-item, .topic-item {
+.entity-item, 
+.topic-item {
     background-color: var(--bg-accent);
     border-radius: 16px;
     padding: 4px 12px;
@@ -396,18 +469,18 @@ html, body {
 }
 
 .entity-item {
-    border-left: 3px solid var(--primary-color);
+    border-inline-start: 3px solid var(--primary-color);
 }
 
 .topic-item {
-    border-left: 3px solid var(--info-color);
+    border-inline-start: 3px solid var(--info-color);
 }
 
 .memory-item {
     background-color: var(--bg-accent);
     border-radius: var(--border-radius);
     padding: 10px;
-    margin-bottom: 8px;
+    margin-block-end: 8px;
     font-size: 0.9rem;
     width: 100%;
 }
@@ -421,19 +494,22 @@ html, body {
 .memory-meta {
     font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-block-start: 4px;
 }
 
-.document-actions, .memory-actions {
+.document-actions, 
+.memory-actions {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-block-end: 16px;
 }
 
-/* Mensajes de chat */
+/* ==========================================================================
+   Chat Messages
+   ========================================================================== */
 .message {
     display: flex;
-    margin-bottom: 20px;
+    margin-block-end: 20px;
 }
 
 .message.user {
@@ -447,15 +523,15 @@ html, body {
     box-shadow: var(--box-shadow);
 }
 
-.message.user .message-bubble {
+.message-user-bubble {
     background-color: var(--primary-color);
     color: white;
-    border-bottom-right-radius: 4px;
+    border-end-end-radius: 4px;
 }
 
-.message.bot .message-bubble {
+.message-bot-bubble {
     background-color: var(--bg-secondary);
-    border-bottom-left-radius: 4px;
+    border-end-start-radius: 4px;
 }
 
 .message-content {
@@ -468,15 +544,15 @@ html, body {
     align-items: center;
     font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-top: 6px;
+    margin-block-start: 6px;
 }
 
-.user .message-meta {
+.message-meta-user {
     color: rgba(255, 255, 255, 0.8);
 }
 
 .message-time {
-    margin-right: 10px;
+    margin-inline-end: 10px;
 }
 
 .message-buttons {
@@ -497,7 +573,14 @@ html, body {
     opacity: 1;
 }
 
-/* Markdown en mensajes */
+.message-button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: var(--focus-outline-offset);
+}
+
+/* ==========================================================================
+   Markdown Content Styling
+   ========================================================================== */
 .message-content pre {
     background-color: var(--bg-accent);
     padding: 10px;
@@ -513,26 +596,36 @@ html, body {
     border-radius: 3px;
 }
 
-.message.user .message-content code {
+.message-content-user code {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-.message-content ul, .message-content ol {
-    margin-left: 20px;
-    margin-bottom: 10px;
+.message-content ul, 
+.message-content ol {
+    margin-inline-start: 20px;
+    margin-block-end: 10px;
 }
 
 .message-content p {
-    margin-bottom: 10px;
+    margin-block-end: 10px;
 }
 
-.message-content h1, .message-content h2, .message-content h3,
-.message-content h4, .message-content h5, .message-content h6 {
+.message-content h1, 
+.message-content h2, 
+.message-content h3,
+.message-content h4, 
+.message-content h5, 
+.message-content h6 {
     margin: 16px 0 8px 0;
 }
 
-/* Componentes UI */
-.primary-btn, .secondary-btn, .danger-btn, .send-btn {
+/* ==========================================================================
+   UI Components
+   ========================================================================== */
+.primary-btn, 
+.secondary-btn, 
+.danger-btn, 
+.send-btn {
     padding: 8px 16px;
     border-radius: var(--border-radius);
     font-family: var(--font-family);
@@ -553,6 +646,11 @@ html, body {
 
 .primary-btn:hover {
     background-color: var(--primary-dark);
+}
+
+.primary-btn:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-color);
+    outline-offset: var(--focus-outline-offset);
 }
 
 .secondary-btn {
@@ -579,7 +677,7 @@ html, body {
     color: white;
     border-radius: 50%;
     padding: 8px;
-    margin-left: 8px;
+    margin-inline-start: 8px;
 }
 
 .send-btn:disabled {
@@ -602,7 +700,9 @@ html, body {
     color: var(--text-color);
 }
 
-/* Estado del sistema */
+/* ==========================================================================
+   System Status
+   ========================================================================== */
 .system-status {
     display: flex;
     align-items: center;
@@ -614,29 +714,28 @@ html, body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    margin-right: 6px;
+    margin-inline-end: 6px;
 }
 
-.status-dot.online {
+.status-dot-online {
     background-color: var(--success-color);
 }
 
-.status-dot.error {
+.status-dot-error {
     background-color: var(--danger-color);
 }
 
-.status-dot.warning {
+.status-dot-warning {
     background-color: var(--warning-color);
 }
 
-/* Modales */
+/* ==========================================================================
+   Modal Components
+   ========================================================================== */
 .modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 100;
     align-items: center;
@@ -658,7 +757,7 @@ html, body {
     flex-direction: column;
 }
 
-.modal-content.large {
+.modal-content-large {
     width: 800px;
 }
 
@@ -667,7 +766,7 @@ html, body {
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid var(--border-color);
+    border-block-end: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
@@ -693,32 +792,34 @@ html, body {
     justify-content: flex-end;
     gap: 10px;
     padding: 16px;
-    border-top: 1px solid var(--border-color);
+    border-block-start: 1px solid var(--border-color);
 }
 
-/* Configuración */
+/* ==========================================================================
+   Settings
+   ========================================================================== */
 .settings-section {
-    margin-bottom: 24px;
+    margin-block-end: 24px;
 }
 
 .settings-section h4 {
-    margin-bottom: 16px;
+    margin-block-end: 16px;
 }
 
 .setting-item {
-    margin-bottom: 16px;
+    margin-block-end: 16px;
 }
 
 .setting-item label {
     display: block;
-    margin-bottom: 8px;
+    margin-block-end: 8px;
     font-weight: 500;
 }
 
 .setting-description {
     font-size: 0.8rem;
     color: var(--text-secondary);
-    margin-top: 4px;
+    margin-block-start: 4px;
 }
 
 .slider-container {
@@ -731,7 +832,7 @@ html, body {
     flex: 1;
 }
 
-.setting-item select, .setting-item textarea {
+.setting-input {
     width: 100%;
     padding: 8px;
     border-radius: var(--border-radius);
@@ -741,19 +842,19 @@ html, body {
     font-family: var(--font-family);
 }
 
-.setting-item textarea {
+.setting-textarea {
     resize: vertical;
     min-height: 80px;
 }
 
-.setting-item.checkbox {
+.setting-item-checkbox {
     display: flex;
     align-items: center;
 }
 
-.setting-item.checkbox label {
-    margin-bottom: 0;
-    margin-left: 10px;
+.setting-item-checkbox label {
+    margin-block-end: 0;
+    margin-inline-start: 10px;
 }
 
 .toggle-checkbox {
@@ -777,21 +878,23 @@ html, body {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    top: 2px;
-    left: 2px;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
     background-color: white;
     transition: all var(--transition-speed) ease;
 }
 
 .toggle-checkbox:checked:before {
-    left: 22px;
+    inset-inline-start: 22px;
 }
 
-/* Vista previa de documento */
+/* ==========================================================================
+   Document Preview
+   ========================================================================== */
 .document-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-block-end: 16px;
 }
 
 #document-metadata {
@@ -811,7 +914,9 @@ html, body {
     line-height: 1.5;
 }
 
-/* Análisis de documento */
+/* ==========================================================================
+   Document Analysis
+   ========================================================================== */
 .document-analysis {
     display: flex;
     flex-direction: column;
@@ -841,33 +946,35 @@ html, body {
 }
 
 .concept-score {
-    margin-left: 6px;
+    margin-inline-start: 6px;
     font-size: 0.8rem;
     color: var(--text-secondary);
     opacity: 0.8;
 }
 
-/* Resultados de búsqueda */
+/* ==========================================================================
+   Search Results
+   ========================================================================== */
 .search-results {
-    margin-top: 16px;
+    margin-block-start: 16px;
 }
 
 .search-result-item {
     background-color: var(--bg-accent);
     border-radius: var(--border-radius);
     padding: 12px;
-    margin-bottom: 12px;
+    margin-block-end: 12px;
     cursor: pointer;
 }
 
 .result-title {
     font-weight: 500;
-    margin-bottom: 8px;
+    margin-block-end: 8px;
 }
 
 .result-snippet {
     font-size: 0.9rem;
-    margin-bottom: 8px;
+    margin-block-end: 8px;
 }
 
 .result-highlight {
@@ -880,11 +987,13 @@ html, body {
     color: var(--text-secondary);
 }
 
-/* Toast notifications */
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
 .toast-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    inset-block-end: 20px;
+    inset-inline-end: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -899,15 +1008,23 @@ html, body {
     align-items: center;
     min-width: 300px;
     max-width: 450px;
-    animation: toast-in 0.3s ease forwards;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.toast.active {
+    transform: translateX(0);
+    opacity: 1;
 }
 
 .toast.closing {
-    animation: toast-out 0.3s ease forwards;
+    transform: translateX(100%);
+    opacity: 0;
 }
 
 .toast-icon {
-    margin-right: 10px;
+    margin-inline-end: 10px;
     font-size: 1.2rem;
 }
 
@@ -917,7 +1034,7 @@ html, body {
 
 .toast-title {
     font-weight: 500;
-    margin-bottom: 2px;
+    margin-block-end: 2px;
 }
 
 .toast-message {
@@ -938,54 +1055,33 @@ html, body {
     opacity: 1;
 }
 
-.toast.success {
+.toast-success {
     background-color: #d4edda;
     color: #155724;
-    border-left: 4px solid var(--success-color);
+    border-inline-start: 4px solid var(--success-color);
 }
 
-.toast.error {
+.toast-error {
     background-color: #f8d7da;
     color: #721c24;
-    border-left: 4px solid var(--danger-color);
+    border-inline-start: 4px solid var(--danger-color);
 }
 
-.toast.warning {
+.toast-warning {
     background-color: #fff3cd;
     color: #856404;
-    border-left: 4px solid var(--warning-color);
+    border-inline-start: 4px solid var(--warning-color);
 }
 
-.toast.info {
+.toast-info {
     background-color: #d1ecf1;
     color: #0c5460;
-    border-left: 4px solid var(--info-color);
+    border-inline-start: 4px solid var(--info-color);
 }
 
-/* Animaciones */
-@keyframes toast-in {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes toast-out {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-/* Mensaje de bienvenida */
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
 .welcome-message {
     text-align: center;
     padding: 40px 20px;
@@ -994,16 +1090,15 @@ html, body {
 }
 
 .welcome-message h2 {
-    margin-bottom: 16px;
+    margin-block-end: 16px;
     color: var(--primary-color);
 }
 
 .welcome-message p {
-    margin-bottom: 10px;
+    margin-block-end: 10px;
     color: var(--text-secondary);
 }
 
-/* Mensajes vacíos */
 .empty-message {
     color: var(--text-secondary);
     font-style: italic;
@@ -1011,7 +1106,6 @@ html, body {
     padding: 10px;
 }
 
-/* Mensaje de carga */
 .loading-message {
     display: flex;
     align-items: center;
@@ -1028,6 +1122,7 @@ html, body {
     width: 20px;
     height: 20px;
     animation: spin 1s linear infinite;
+    will-change: transform;
 }
 
 @keyframes spin {
@@ -1035,62 +1130,162 @@ html, body {
     100% { transform: rotate(360deg); }
 }
 
-/* Media queries para responsividad */
-@media (max-width: 1200px) {
-    .right-sidebar {
-        width: 280px;
-    }
-}
-
-@media (max-width: 992px) {
-    .left-sidebar {
-        width: 240px;
-    }
-    
-    .right-sidebar {
-        width: 250px;
-    }
-}
-
-@media (max-width: 768px) {
-    .right-sidebar {
-        position: absolute;
-        right: 0;
-        top: 0;
-        height: 100%;
-        transform: translateX(100%);
-        transition: transform var(--transition-speed) ease;
-    }
-    
-    .right-sidebar.visible {
-        transform: translateX(0);
-    }
-    
-    .chat-header {
+/* ==========================================================================
+   Media Queries
+   ========================================================================== */
+/* Mobile-first approach */
+@media (max-width: 576px) {
+    .app-container {
+        grid-template-columns: 1fr;
+        grid-template-areas: "main";
         position: relative;
     }
-}
-
-@media (max-width: 576px) {
-    .left-sidebar {
-        position: absolute;
-        left: 0;
-        top: 0;
+    
+    .left-sidebar,
+    .right-sidebar {
+        position: fixed;
         height: 100%;
+        top: 0;
+        z-index: 20;
+    }
+    
+    .left-sidebar {
+        left: 0;
         transform: translateX(-100%);
         transition: transform var(--transition-speed) ease;
-        z-index: 20;
+    }
+    
+    .right-sidebar {
+        right: 0;
+        transform: translateX(100%);
+        transition: transform var(--transition-speed) ease;
     }
     
     .left-sidebar.visible {
         transform: translateX(0);
     }
     
-    .app-container {
-        position: relative;
+    .right-sidebar.visible {
+        transform: translateX(0);
     }
     
-    .modal-content.large {
+    .modal-content-large {
         width: 95%;
+    }
+}
+
+/* Tablet */
+@media (min-width: 577px) and (max-width: 768px) {
+    .app-container {
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-areas: "left-sidebar main";
+    }
+    
+    .right-sidebar {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100%;
+        transform: translateX(100%);
+        transition: transform var(--transition-speed) ease;
+        z-index: 20;
+    }
+    
+    .right-sidebar.visible {
+        transform: translateX(0);
+    }
+}
+
+/* Tablet landscape and small desktop */
+@media (min-width: 769px) and (max-width: 992px) {
+    :root {
+        --sidebar-width: 240px;
+        --right-sidebar-width: 250px;
+    }
+}
+
+/* Medium desktop */
+@media (min-width: 993px) and (max-width: 1200px) {
+    :root {
+        --right-sidebar-width: 280px;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+@media print {
+    /* Hide UI elements not needed for printing */
+    .left-sidebar,
+    .right-sidebar,
+    .input-container,
+    .chat-actions,
+    .modal,
+    .toast-container {
+        display: none !important;
+    }
+    
+    /* Reset the layout for printing */
+    .app-container {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+    
+    .chat-container {
+        overflow: visible;
+        height: auto;
+    }
+    
+    .message-container {
+        overflow: visible;
+    }
+    
+    /* Optimize colors and contrast for printing */
+    body {
+        background-color: white;
+        color: black;
+    }
+    
+    /* Format messages for printing */
+    .message-bubble {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    
+    .message.user .message-bubble,
+    .message.bot .message-bubble {
+        background-color: transparent;
+        color: black;
+    }
+    
+    /* Avoid page breaks inside messages */
+    .message {
+        page-break-inside: avoid;
+    }
+    
+    /* Ensure URLs are printed */
+    a::after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+    }
+    
+    /* Widen the container for better use of page space */
+    .message-container {
+        padding: 0;
+    }
+    
+    .message-bubble {
+        max-width: 100%;
+    }
+}
+
+/* ==========================================================================
+   Accessibility - Reduced Motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
     }
 }
