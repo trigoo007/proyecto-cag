@@ -5,54 +5,84 @@
  * utilizando técnicas de augmentación contextual para mejorar las respuestas.
  */
 
+// Dependencias principales
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
-const db = require('./db');
-const config = require('./config');
-const fetch = require('node-fetch');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+const fetch = require('node-fetch');
 
-// Módulos CAG
-const contextAnalyzer = require('./context-analyzer');
-const entityExtractor = require('./entity-extractor');
-const contextManager = require('./context-manager');
-const promptBuilder = require('./prompt-builder');
-const memoryStore = require('./memory-store');
-const documentProcessor = require('./document-processor');
-const titleGenerator = require('./title-generator');
-const globalMemory = require('./global-memory');
-
+// Inicializar Express
 const app = express();
 const PORT = process.env.PORT || 3000;
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 
-// Middleware
+// Módulos CAG (importaciones)
+const db = require('./src/services/dbService');
+const contextAnalyzer = require('./src/services/contextAnalyzer');
+const entityExtractor = require('./src/services/entityExtractor');
+const contextManager = require('./src/services/contextManager');
+const promptBuilder = require('./src/services/promptBuilder');
+const memoryStore = require('./src/services/memoryStore');
+const documentProcessor = require('./src/services/documentProcessor');
+const titleGenerator = require('./src/services/titleGenerator');
+const globalMemory = require('./src/services/globalMemory');
+const logger = require('./src/utils/logger');
+const config = require('./src/config');
+
+// Middleware de seguridad y básicos
+app.use(helmet());
+app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Manejo de errores global
-app.use((err, req, res, next) => {
-    console.error('Error inesperado:', err);
-    res.status(500).json({ 
-        error: 'Error interno del servidor', 
-        message: err.message 
+// Límites de peticiones para prevenir abusos
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Límite de 100 peticiones por ventana
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        error: 'Demasiadas peticiones, intente más tarde',
+        code: 'RATE_LIMIT_EXCEEDED'
+    }
+});
+app.use('/api/', apiLimiter);
+
+// Middleware para logging de peticiones
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        logger.info({
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            responseTime: Date.now() - start,
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+        });
     });
+    next();
 });
 
 // Verificar conexión con Ollama antes de iniciar completamente
 async function checkOllamaConnection() {
     try {
-        console.log('Verificando conexión con Ollama...');
-        const response = await fetch('http://localhost:11434/api/tags', {
+        logger.info('Verificando conexión con Ollama...');
+        const response = await fetch(`${OLLAMA_URL}/api/tags`, {
             method: 'GET',
             timeout: 5000
         });
         
         if (response.ok) {
-            console.log('Conexión con Ollama establecida correctamente');
+            logger.info('Conexión con Ollama establecida correctamente');
             
             // Verificar si el modelo Gemma está disponible
             const data = await response.json();
@@ -61,20 +91,30 @@ async function checkOllamaConnection() {
             );
             
             if (gemmaAvailable) {
-                console.log('Modelo Gemma3 encontrado y disponible');
+                logger.info('Modelo Gemma3 encontrado y disponible');
             } else {
-                console.warn('ADVERTENCIA: Modelo Gemma3 no encontrado. Asegúrate de descargarlo con: ollama pull gemma3:27b');
+                logger.warn('ADVERTENCIA: Modelo Gemma3 no encontrado. Asegúrate de descargarlo con: ollama pull gemma3:27b');
             }
             
-            return true;
+            return {
+                connected: true,
+                models: data.models.map(m => m.name),
+                defaultModelAvailable: gemmaAvailable
+            };
         } else {
-            console.error('No se pudo conectar con Ollama: ' + response.statusText);
-            return false;
+            logger.error(`No se pudo conectar con Ollama: ${response.statusText}`);
+            return {
+                connected: false,
+                error: `Estado: ${response.status} ${response.statusText}`
+            };
         }
     } catch (error) {
-        console.error('Error al conectar con Ollama:', error.message);
-        console.log('Asegúrate de que Ollama esté ejecutándose en http://localhost:11434');
-        return false;
+        logger.error('Error al conectar con Ollama:', error);
+        logger.info('Asegúrate de que Ollama esté ejecutándose en ' + OLLAMA_URL);
+        return {
+            connected: false,
+            error: error.message
+        };
     }
 }
 
@@ -90,21 +130,17 @@ function ensureDirectories() {
         path.join(__dirname, 'data', 'entities'),
         path.join(__dirname, 'data', 'domains'),
         path.join(__dirname, 'data', 'users'),
-        path.join(__dirname, 'data', 'global_memory')
+        path.join(__dirname, 'data', 'global_memory'),
+        path.join(__dirname, 'logs')
     ];
 
     dirs.forEach(dir => {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
-            console.log(`Directorio creado: ${dir}`);
+            logger.info(`Directorio creado: ${dir}`);
         }
     });
 }
-
-// Inicializar la base de datos, configuración y directorios
-ensureDirectories();
-db.init();
-config.init();
 
 // Rutas para la API
 
@@ -113,7 +149,10 @@ app.get('/api/config', (req, res) => {
     try {
         res.json(config.get());
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONFIG_ERROR'
+        });
     }
 });
 
@@ -126,7 +165,10 @@ app.post('/api/config', (req, res) => {
             config: updatedConfig 
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONFIG_UPDATE_ERROR'
+        });
     }
 });
 
@@ -145,7 +187,11 @@ app.get('/api/conversations', (req, res) => {
         
         res.json({ conversations, stats });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener conversaciones:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONVERSATIONS_FETCH_ERROR'
+        });
     }
 });
 
@@ -166,9 +212,14 @@ app.post('/api/conversations', (req, res) => {
         };
         
         db.saveConversation(conversation);
+        logger.info(`Nueva conversación creada: ${id}`);
         res.json(conversation);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al crear conversación:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONVERSATION_CREATE_ERROR'
+        });
     }
 });
 
@@ -177,11 +228,18 @@ app.get('/api/conversations/:id', (req, res) => {
     try {
         const conversation = db.getConversation(req.params.id);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         res.json(conversation);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error(`Error al obtener conversación ${req.params.id}:`, error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONVERSATION_FETCH_ERROR'
+        });
     }
 });
 
@@ -192,7 +250,10 @@ app.delete('/api/conversations/:id', (req, res) => {
         const success = db.deleteConversation(id);
         
         if (!success) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         // También eliminar documentos asociados
@@ -207,9 +268,14 @@ app.delete('/api/conversations/:id', (req, res) => {
             fs.unlinkSync(stmFile);
         }
         
+        logger.info(`Conversación eliminada: ${id}`);
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error(`Error al eliminar conversación ${req.params.id}:`, error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONVERSATION_DELETE_ERROR'
+        });
     }
 });
 
@@ -218,11 +284,22 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
     try {
         const { id } = req.params;
         const { role, content } = req.body;
+        
+        if (!role || !content) {
+            return res.status(400).json({
+                error: 'Se requieren los campos role y content',
+                code: 'INVALID_MESSAGE_FORMAT'
+            });
+        }
+        
         const timestamp = new Date().toISOString();
         
         const conversation = db.getConversation(id);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         const message = { role, content, timestamp };
@@ -243,6 +320,7 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
         }
         
         db.saveConversation(conversation);
+        logger.info(`Mensaje añadido a conversación ${id}`);
         
         // Responder con título actualizado si cambió
         res.json({
@@ -250,8 +328,11 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
             title: conversation.title
         });
     } catch (error) {
-        console.error('Error al añadir mensaje:', error);
-        res.status(500).json({ error: error.message });
+        logger.error(`Error al añadir mensaje a conversación ${req.params.id}:`, error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'MESSAGE_ADD_ERROR'
+        });
     }
 });
 
@@ -260,20 +341,33 @@ app.post('/api/generate', async (req, res) => {
     try {
         const { conversation_id, config: userConfig } = req.body;
         
+        if (!conversation_id) {
+            return res.status(400).json({
+                error: 'Se requiere el campo conversation_id',
+                code: 'INVALID_REQUEST'
+            });
+        }
+        
         const conversation = db.getConversation(conversation_id);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         // Obtener el último mensaje del usuario
         const lastMessage = conversation.messages[conversation.messages.length - 1];
         
         if (!lastMessage || lastMessage.role !== 'user') {
-            return res.status(400).json({ error: 'No hay un mensaje de usuario para responder' });
+            return res.status(400).json({ 
+                error: 'No hay un mensaje de usuario para responder',
+                code: 'NO_USER_MESSAGE'
+            });
         }
         
-        console.log(`Generando respuesta para conversación ${conversation_id}`);
-        console.log(`Mensaje del usuario: "${lastMessage.content.substring(0, 50)}${lastMessage.content.length > 50 ? '...' : ''}"`);
+        logger.info(`Generando respuesta para conversación ${conversation_id}`);
+        logger.debug(`Mensaje del usuario: "${lastMessage.content.substring(0, 50)}${lastMessage.content.length > 50 ? '...' : ''}"`);
         
         // Analizar el contexto usando CAG
         let contextMap;
@@ -287,9 +381,9 @@ app.post('/api/generate', async (req, res) => {
             // Añadir ID de conversación al contexto
             contextMap.currentConversationId = conversation_id;
             
-            console.log("Contexto analizado correctamente");
+            logger.debug("Contexto analizado correctamente");
         } catch (contextError) {
-            console.error("Error al analizar contexto:", contextError);
+            logger.error("Error al analizar contexto:", contextError);
             contextMap = { 
                 currentMessage: lastMessage.content,
                 currentConversationId: conversation_id
@@ -300,7 +394,7 @@ app.post('/api/generate', async (req, res) => {
         let documents = [];
         try {
             documents = await documentProcessor.getConversationDocuments(conversation_id);
-            console.log(`Encontrados ${documents.length} documentos para la conversación`);
+            logger.debug(`Encontrados ${documents.length} documentos para la conversación`);
             
             // Enriquecer el contextMap con información de documentos
             if (documents && documents.length > 0) {
@@ -315,37 +409,38 @@ app.post('/api/generate', async (req, res) => {
                 }));
             }
         } catch (docError) {
-            console.error("Error al procesar documentos:", docError);
+            logger.error("Error al procesar documentos:", docError);
         }
         
         // Enriquecer el contexto con memoria global
         try {
             contextMap = globalMemory.enrichContextWithGlobalMemory(contextMap);
-            console.log("Contexto enriquecido con memoria global");
+            logger.debug("Contexto enriquecido con memoria global");
         } catch (globalMemoryError) {
-            console.error("Error al enriquecer con memoria global:", globalMemoryError);
+            logger.error("Error al enriquecer con memoria global:", globalMemoryError);
         }
         
         // Construir prompt mejorado con CAG
         const cagMessages = promptBuilder.buildCAGPrompt(contextMap, userConfig);
         
-        console.log('Usando CAG para generar respuesta con contexto mejorado');
+        logger.info('Usando CAG para generar respuesta con contexto mejorado');
         
         // Llamar a la API de Ollama con el prompt mejorado
-        const ollama_response = await fetch('http://localhost:11434/api/chat', {
+        const ollama_response = await fetch(`${OLLAMA_URL}/api/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gemma3:27b',
+                model: userConfig?.model || 'gemma3:27b',
                 messages: cagMessages,
                 stream: false,
                 options: {
-                    temperature: parseFloat(userConfig.temperature || 0.7),
-                    num_predict: parseInt(userConfig.max_tokens || 2048)
+                    temperature: parseFloat(userConfig?.temperature || 0.7),
+                    num_predict: parseInt(userConfig?.max_tokens || 2048)
                 }
-            })
+            }),
+            timeout: 30000
         });
         
         if (!ollama_response.ok) {
@@ -355,7 +450,7 @@ app.post('/api/generate', async (req, res) => {
         const data = await ollama_response.json();
         
         // Procesar la respuesta para mejorar formato
-        const processedResponse = this._formatModelResponse(data.message.content);
+        const processedResponse = formatModelResponse(data.message.content);
         
         // Guardar la respuesta en la conversación
         const timestamp = new Date().toISOString();
@@ -369,10 +464,15 @@ app.post('/api/generate', async (req, res) => {
         conversation.lastActive = timestamp;
         db.saveConversation(conversation);
         
+        // Variable para controlar si el título cambió
+        let titleChanged = false;
+        let newTitle = conversation.title;
+        
         // Actualizar el título si es necesario basado en la conversación completa
         if (titleGenerator.needsTitleUpdate(conversation)) {
-            const newTitle = titleGenerator.improveTitle(conversation);
+            newTitle = titleGenerator.improveTitle(conversation);
             if (newTitle !== conversation.title) {
+                titleChanged = true;
                 conversation.title = newTitle;
                 conversation.titleGeneratedAt = conversation.messages.length;
                 db.saveConversation(conversation);
@@ -388,9 +488,9 @@ app.post('/api/generate', async (req, res) => {
                 lastMessage.content,
                 botMessage.content
             );
-            console.log('Memoria actualizada correctamente');
+            logger.debug('Memoria actualizada correctamente');
         } catch (memoryError) {
-            console.error('Error al actualizar la memoria:', memoryError);
+            logger.error('Error al actualizar la memoria:', memoryError);
             // Continuar con la respuesta aunque falle la actualización de memoria
         }
         
@@ -400,21 +500,24 @@ app.post('/api/generate', async (req, res) => {
                 contextMap,
                 lastMessage.content,
                 botMessage.content,
-                conversation_id // Añadir ID de conversación
+                conversation_id
             );
-            console.log('Memoria global actualizada correctamente');
+            logger.debug('Memoria global actualizada correctamente');
         } catch (globalMemoryError) {
-            console.error('Error al actualizar memoria global:', globalMemoryError);
+            logger.error('Error al actualizar memoria global:', globalMemoryError);
         }
         
         res.json({
             ...botMessage,
             title: conversation.title, // Incluir título actualizado
-            titleChanged: newTitle !== conversation.title
+            titleChanged
         });
     } catch (error) {
-        console.error('Error al generar respuesta:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al generar respuesta:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'GENERATION_ERROR'
+        });
     }
 });
 
@@ -423,7 +526,7 @@ app.post('/api/generate', async (req, res) => {
  * @param {string} response - Respuesta original del modelo
  * @returns {string} Respuesta con formato mejorado
  */
-function _formatModelResponse(response) {
+function formatModelResponse(response) {
     if (!response) return '';
     
     let formattedResponse = response;
@@ -452,7 +555,10 @@ function _formatModelResponse(response) {
 app.post('/api/conversations/:id/documents', upload.single('document'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'No se ha proporcionado ningún archivo' });
+            return res.status(400).json({ 
+                error: 'No se ha proporcionado ningún archivo',
+                code: 'NO_FILE_UPLOADED'
+            });
         }
         
         const { id: conversationId } = req.params;
@@ -462,7 +568,10 @@ app.post('/api/conversations/:id/documents', upload.single('document'), async (r
         // Verificar que la conversación existe
         const conversation = db.getConversation(conversationId);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         // Procesar el documento
@@ -484,6 +593,7 @@ app.post('/api/conversations/:id/documents', upload.single('document'), async (r
         conversation.lastActive = timestamp;
         db.saveConversation(conversation);
         
+        logger.info(`Documento subido para conversación ${conversationId}: ${fileName}`);
         res.json({ 
             success: true,
             documentId: docInfo.id,
@@ -491,21 +601,27 @@ app.post('/api/conversations/:id/documents', upload.single('document'), async (r
             documentInfo: docInfo
         });
     } catch (error) {
-        console.error('Error al subir documento:', error);
+        logger.error('Error al subir documento:', error);
         
         // Respuesta de error más informativa
         let errorMessage = error.message;
         let statusCode = 500;
+        let errorCode = 'DOCUMENT_UPLOAD_ERROR';
         
         if (error.message.includes('tamaño máximo')) {
             statusCode = 413; // Payload Too Large
             errorMessage = 'El archivo excede el tamaño máximo permitido';
+            errorCode = 'FILE_TOO_LARGE';
         } else if (error.message.includes('formato')) {
             statusCode = 415; // Unsupported Media Type
             errorMessage = 'Formato de archivo no soportado';
+            errorCode = 'UNSUPPORTED_FILE_FORMAT';
         }
         
-        res.status(statusCode).json({ error: errorMessage });
+        res.status(statusCode).json({ 
+            error: errorMessage,
+            code: errorCode
+        });
     }
 });
 
@@ -517,7 +633,10 @@ app.get('/api/conversations/:id/documents', async (req, res) => {
         // Verificar que la conversación existe
         const conversation = db.getConversation(conversationId);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         // Obtener documentos
@@ -525,8 +644,11 @@ app.get('/api/conversations/:id/documents', async (req, res) => {
         
         res.json(documents);
     } catch (error) {
-        console.error('Error al obtener documentos:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener documentos:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'DOCUMENTS_FETCH_ERROR'
+        });
     }
 });
 
@@ -538,10 +660,20 @@ app.get('/api/conversations/:id/documents/:docId', async (req, res) => {
         // Obtener documento
         const documentData = await documentProcessor.getDocumentContent(conversationId, docId);
         
+        if (!documentData) {
+            return res.status(404).json({
+                error: 'Documento no encontrado',
+                code: 'DOCUMENT_NOT_FOUND'
+            });
+        }
+        
         res.json(documentData);
     } catch (error) {
-        console.error('Error al obtener documento:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener documento:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'DOCUMENT_FETCH_ERROR'
+        });
     }
 });
 
@@ -565,10 +697,14 @@ app.delete('/api/conversations/:id/documents/:docId', async (req, res) => {
             db.saveConversation(conversation);
         }
         
+        logger.info(`Documento eliminado: ${docId} de conversación ${conversationId}`);
         res.json({ success: true });
     } catch (error) {
-        console.error('Error al eliminar documento:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al eliminar documento:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'DOCUMENT_DELETE_ERROR'
+        });
     }
 });
 
@@ -579,7 +715,8 @@ app.get('/api/conversations/:id/documents/search/:term', async (req, res) => {
         
         if (!term || term.length < 3) {
             return res.status(400).json({ 
-                error: 'El término de búsqueda debe tener al menos 3 caracteres' 
+                error: 'El término de búsqueda debe tener al menos 3 caracteres',
+                code: 'INVALID_SEARCH_TERM'
             });
         }
         
@@ -587,8 +724,11 @@ app.get('/api/conversations/:id/documents/search/:term', async (req, res) => {
         
         res.json(results);
     } catch (error) {
-        console.error('Error al buscar en documentos:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al buscar en documentos:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'DOCUMENT_SEARCH_ERROR'
+        });
     }
 });
 
@@ -599,12 +739,18 @@ app.post('/api/conversations/:id/title', (req, res) => {
         const { title } = req.body;
         
         if (!title || title.trim() === '') {
-            return res.status(400).json({ error: 'El título no puede estar vacío' });
+            return res.status(400).json({ 
+                error: 'El título no puede estar vacío',
+                code: 'INVALID_TITLE'
+            });
         }
         
         const conversation = db.getConversation(id);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         const oldTitle = conversation.title;
@@ -613,6 +759,7 @@ app.post('/api/conversations/:id/title', (req, res) => {
         conversation.lastActive = new Date().toISOString();
         
         db.saveConversation(conversation);
+        logger.info(`Título de conversación ${id} actualizado: "${title}"`);
         
         res.json({ 
             success: true, 
@@ -620,7 +767,11 @@ app.post('/api/conversations/:id/title', (req, res) => {
             oldTitle
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al actualizar título:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'TITLE_UPDATE_ERROR'
+        });
     }
 });
 
@@ -630,12 +781,19 @@ app.get('/api/conversations/:id/context', async (req, res) => {
         const contextMap = contextManager.getContextMap(req.params.id);
         
         if (!contextMap) {
-            return res.status(404).json({ error: 'Información contextual no encontrada' });
+            return res.status(404).json({ 
+                error: 'Información contextual no encontrada',
+                code: 'CONTEXT_NOT_FOUND'
+            });
         }
         
         res.json(contextMap);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener contexto:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONTEXT_FETCH_ERROR'
+        });
     }
 });
 
@@ -645,12 +803,19 @@ app.get('/api/conversations/:id/memory', async (req, res) => {
         const memory = await memoryStore.getMemory(req.params.id, null);
         
         if (!memory) {
-            return res.status(404).json({ error: 'Información de memoria no encontrada' });
+            return res.status(404).json({ 
+                error: 'Información de memoria no encontrada',
+                code: 'MEMORY_NOT_FOUND'
+            });
         }
         
         res.json(memory);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener memoria:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'MEMORY_FETCH_ERROR'
+        });
     }
 });
 
@@ -660,7 +825,11 @@ app.get('/api/memory/global', (req, res) => {
         const globalMemoryContext = globalMemory.getGlobalMemoryContext();
         res.json(globalMemoryContext);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener memoria global:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'GLOBAL_MEMORY_FETCH_ERROR'
+        });
     }
 });
 
@@ -673,6 +842,7 @@ app.post('/api/memory/reset', async (req, res) => {
         // Reiniciar memoria del almacenamiento
         const memoryReset = await memoryStore.resetMemory();
         
+        logger.info('Memoria global y almacenamiento de memoria reiniciados');
         res.json({ 
             success: true, 
             message: 'Memoria reiniciada correctamente',
@@ -680,8 +850,11 @@ app.post('/api/memory/reset', async (req, res) => {
             memoryReset
         });
     } catch (error) {
-        console.error('Error al reiniciar la memoria:', error);
-        res.status(500).json({ error: error.message });
+        logger.error('Error al reiniciar la memoria:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'MEMORY_RESET_ERROR'
+        });
     }
 });
 
@@ -698,7 +871,7 @@ app.get('/api/system/dependencies', (req, res) => {
             error: null
         };
         
-        fetch('http://localhost:11434/api/tags', { 
+        fetch(`${OLLAMA_URL}/api/tags`, { 
             method: 'GET', 
             timeout: 2000 
         })
@@ -727,7 +900,11 @@ app.get('/api/system/dependencies', (req, res) => {
             });
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al verificar dependencias:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'DEPENDENCIES_CHECK_ERROR'
+        });
     }
 });
 
@@ -736,14 +913,21 @@ app.get('/api/conversations/:id/export', (req, res) => {
     try {
         const conversation = db.getConversation(req.params.id);
         if (!conversation) {
-            return res.status(404).json({ error: 'Conversación no encontrada' });
+            return res.status(404).json({ 
+                error: 'Conversación no encontrada',
+                code: 'CONVERSATION_NOT_FOUND'
+            });
         }
         
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename=conversation-${req.params.id}.json`);
         res.json(conversation);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al exportar conversación:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'CONVERSATION_EXPORT_ERROR'
+        });
     }
 });
 
@@ -804,8 +988,30 @@ app.get('/api/system/status', (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        logger.error('Error al obtener estado del sistema:', error);
+        res.status(500).json({ 
+            error: error.message,
+            code: 'SYSTEM_STATUS_ERROR'
+        });
     }
+});
+
+// Manejo de errores global
+app.use((err, req, res, next) => {
+    logger.error('Error inesperado:', err);
+    const statusCode = err.statusCode || 500;
+    const errorResponse = {
+        error: err.message || 'Error interno del servidor',
+        code: err.code || 'INTERNAL_SERVER_ERROR',
+        timestamp: new Date().toISOString()
+    };
+    
+    // En desarrollo, incluir stack
+    if (process.env.NODE_ENV !== 'production') {
+        errorResponse.stack = err.stack;
+    }
+    
+    res.status(statusCode).json(errorResponse);
 });
 
 // Manejar rutas de frontend (SPA)
@@ -815,31 +1021,57 @@ app.get('*', (req, res) => {
 
 // Iniciar el servidor
 async function startServer() {
-    // Verificar dependencias y conexiones
-    await checkOllamaConnection();
-    
-    // Iniciar escucha en puerto
-    app.listen(PORT, () => {
-        console.log(`Servidor CAG funcionando en http://localhost:${PORT}`);
-        console.log(`Asegurándose de que todos los directorios necesarios existan...`);
+    try {
+        // Verificar dependencias y conexiones
         ensureDirectories();
-        console.log(`Sistema iniciado correctamente.`);
+        db.init();
+        config.init();
         
-        // Mostrar dependencias para procesamiento de documentos
-        const docDeps = documentProcessor.checkDependencies();
-        console.log('Estado de dependencias para procesamiento de documentos:');
-        console.log('- PDF: ' + (docDeps.pdfExtraction ? 'Disponible' : 'No disponible'));
-        console.log('- DOCX: ' + (docDeps.docxExtraction ? 'Disponible' : 'No disponible'));
-        console.log('- CSV: ' + (docDeps.csvParsing ? 'Disponible' : 'No disponible'));
-        console.log('- Excel: ' + (docDeps.excelExtraction ? 'Disponible' : 'No disponible'));
+        // Verificar conexión con Ollama
+        await checkOllamaConnection();
         
-        if (!docDeps.pdfExtraction || !docDeps.docxExtraction || !docDeps.csvParsing || !docDeps.excelExtraction) {
-            console.log('\nPara habilitar todas las funcionalidades de procesamiento de documentos, ejecute:');
-            console.log('npm run install-docs');
-        }
-        
-        console.log('\nLa aplicación está lista para usar.');
-    });
+        // Iniciar escucha en puerto
+        app.listen(PORT, () => {
+            logger.info(`Servidor CAG funcionando en http://localhost:${PORT}`);
+            logger.info(`Sistema iniciado correctamente.`);
+            
+            // Mostrar dependencias para procesamiento de documentos
+            const docDeps = documentProcessor.checkDependencies();
+            logger.info('Estado de dependencias para procesamiento de documentos:');
+            logger.info('- PDF: ' + (docDeps.pdfExtraction ? 'Disponible' : 'No disponible'));
+            logger.info('- DOCX: ' + (docDeps.docxExtraction ? 'Disponible' : 'No disponible'));
+            logger.info('- CSV: ' + (docDeps.csvParsing ? 'Disponible' : 'No disponible'));
+            logger.info('- Excel: ' + (docDeps.excelExtraction ? 'Disponible' : 'No disponible'));
+            
+            if (!docDeps.pdfExtraction || !docDeps.docxExtraction || !docDeps.csvParsing || !docDeps.excelExtraction) {
+                logger.warn('\nPara habilitar todas las funcionalidades de procesamiento de documentos, ejecute:');
+                logger.warn('npm run install-docs');
+            }
+            
+            logger.info('\nLa aplicación está lista para usar.');
+        });
+    } catch (error) {
+        logger.error('Error al iniciar el servidor:', error);
+        process.exit(1);
+    }
 }
 
+// Manejar señales de terminación
+process.on('SIGTERM', () => {
+    logger.info('Recibida señal SIGTERM. Cerrando servidor...');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    logger.info('Recibida señal SIGINT. Cerrando servidor...');
+    process.exit(0);
+});
+
+// Manejar errores no capturados
+process.on('uncaughtException', (error) => {
+    logger.error('Error no capturado:', error);
+    process.exit(1);
+});
+
+// Iniciar el servidor
 startServer();
